@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>HomeBrain — Rodinný správce dokumentů</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-indigo-500 selection:text-white pb-24 md:pb-8">
+
+  <!-- ==================== TOP NAVIGATION ==================== -->
+  <header class="bg-slate-800/90 backdrop-blur border-b border-slate-700/80 sticky top-0 z-40">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center space-x-2.5">
+        <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/30">
+          <span class="text-xl">🧠</span>
+        </div>
+        <div>
+          <h1 class="font-bold text-lg leading-tight tracking-tight text-white flex items-center gap-2">
+            HomeBrain
+            <span class="text-[10px] font-semibold tracking-wider uppercase px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">Web v1</span>
+          </h1>
+          <p class="text-xs text-slate-400">Rodinný archiv a směrovač</p>
+        </div>
+      </div>
+
+      <!-- User Profile Badge & Logout -->
+      <div id="userHeaderBar" class="hidden flex items-center gap-3">
+        <div class="flex items-center gap-2 bg-slate-700/60 px-3 py-1.5 rounded-full border border-slate-600/50">
+          <div class="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center text-xs font-bold text-white uppercase" id="userAvatar">
+            R
+          </div>
+          <span id="userDisplayName" class="text-sm font-medium text-slate-200">Radek</span>
+          <span id="userRoleBadge" class="hidden text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/30 font-semibold">Admin</span>
+        </div>
+        <button id="logoutBtn" title="Odhlásit se" class="p-2 text-slate-400 hover:text-rose-400 hover:bg-slate-700/50 rounded-lg transition">
+          <i data-lucide="log-out" class="w-5 h-5"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ==================== MAIN CONTENT CONTAINER ==================== -->
+  <main class="max-w-5xl mx-auto px-4 py-6 flex-1 w-full">
+
+    <!-- NOTIFICATION TOAST -->
+    <div id="toastNotification" class="hidden mb-6 p-4 rounded-xl border flex items-center justify-between shadow-lg transition-all animate-fade-in">
+      <div class="flex items-center gap-3">
+        <span id="toastIcon" class="text-2xl">✅</span>
+        <div>
+          <p id="toastTitle" class="font-semibold text-sm"></p>
+          <p id="toastMessage" class="text-xs text-slate-300"></p>
+        </div>
+      </div>
+      <button onclick="hideToast()" class="text-slate-400 hover:text-white text-sm p-1">✕</button>
+    </div>
+
+    <!-- ==================== VIEW 1: AUTH / LOGIN ==================== -->
+    <div id="authView" class="max-w-md mx-auto my-8 bg-slate-800/80 p-6 md:p-8 rounded-2xl border border-slate-700 shadow-2xl backdrop-blur">
+      <div class="text-center mb-6">
+        <div class="w-16 h-16 rounded-2xl bg-indigo-600/20 text-indigo-400 mx-auto flex items-center justify-center mb-3 text-3xl">
+          🔒
+        </div>
+        <h2 class="text-2xl font-bold text-white">Přihlášení do HomeBrain</h2>
+        <p class="text-sm text-slate-400 mt-1">Vyberte svůj účet nebo zadejte přihlašovací údaje</p>
+      </div>
+
+      <!-- Quick user selection pills -->
+      <div class="mb-5">
+        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Rychlý výběr profilu</label>
+        <div class="grid grid-cols-2 gap-2.5">
+          <button type="button" onclick="setQuickLogin('radek', 'admin')" class="flex items-center justify-center gap-2 p-3 bg-slate-700/70 hover:bg-indigo-600/30 hover:border-indigo-500 border border-slate-600/80 rounded-xl transition text-sm font-medium">
+            <span>👤</span> Radek
+          </button>
+          <button type="button" onclick="setQuickLogin('monika', 'monika')" class="flex items-center justify-center gap-2 p-3 bg-slate-700/70 hover:bg-pink-600/30 hover:border-pink-500 border border-slate-600/80 rounded-xl transition text-sm font-medium">
+            <span>👩</span> Monika
+          </button>
+        </div>
+      </div>
+
+      <form id="loginForm" class="space-y-4">
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Uživatelské jméno</label>
+          <input type="text" id="loginUsername" required placeholder="např. radek" class="w-full px-4 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-indigo-500 transition">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Heslo / PIN</label>
+          <input type="password" id="loginPassword" required placeholder="••••••••" class="w-full px-4 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-white focus:outline-none focus:border-indigo-500 transition">
+        </div>
+
+        <div class="flex items-center justify-between text-xs">
+          <label class="flex items-center gap-2 cursor-pointer text-slate-300">
+            <input type="checkbox" id="rememberMe" checked class="rounded bg-slate-900 border-slate-700 text-indigo-600 focus:ring-indigo-500">
+            <span>Zapamatovat na tomto zařízení</span>
+          </label>
+        </div>
+
+        <button type="submit" id="loginSubmitBtn" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl shadow-lg shadow-indigo-600/30 transition flex items-center justify-center gap-2">
+          <span>Přihlásit se</span>
+          <i data-lucide="arrow-right" class="w-4 h-4"></i>
+        </button>
+      </form>
+    </div>
+
+    <!-- ==================== VIEW 2: APP TABS (AFTER LOGIN) ==================== -->
+    <div id="appContainer" class="hidden">
+
+      <!-- DESKTOP / TABLET TOP TABS NAVIGATION -->
+      <div class="hidden md:flex border-b border-slate-800 mb-6 gap-2">
+        <button onclick="switchTab('capture')" id="desktopTabBtn-capture" class="tab-btn active-tab flex items-center gap-2 px-5 py-3 font-semibold text-sm rounded-t-xl transition border-b-2">
+          <i data-lucide="camera" class="w-4 h-4"></i>
+          <span>Vyfotit a odeslat</span>
+        </button>
+        <button onclick="switchTab('inbox')" id="desktopTabBtn-inbox" class="tab-btn flex items-center gap-2 px-5 py-3 font-semibold text-sm rounded-t-xl transition border-b-2 text-slate-400 hover:text-slate-200">
+          <i data-lucide="inbox" class="w-4 h-4"></i>
+          <span>Webový Inbox („Co na mě čeká“)</span>
+          <span id="inboxBadgeCount" class="text-xs bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded-full font-bold">0</span>
+        </button>
+        <button onclick="switchTab('settings')" id="desktopTabBtn-settings" class="tab-btn flex items-center gap-2 px-5 py-3 font-semibold text-sm rounded-t-xl transition border-b-2 text-slate-400 hover:text-slate-200">
+          <i data-lucide="settings" class="w-4 h-4"></i>
+          <span>Nastavení & Složky</span>
+        </button>
+      </div>
+
+      <!-- ========== TAB 1: 📸 VYFOTIT & ODESLAT ========== -->
+      <section id="tab-capture" class="tab-content max-w-xl mx-auto space-y-6">
+
+        <!-- PHOTO CAPTURE ZONE -->
+        <div class="bg-slate-800/90 border border-slate-700/80 rounded-2xl p-5 shadow-xl">
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">1. Vyfoťte dokument</label>
+          
+          <input type="file" id="cameraInput" accept="image/*,application/pdf" capture="environment" class="hidden">
+
+          <!-- Capture Trigger & Preview -->
+          <div id="dropZone" onclick="triggerCamera()" class="border-2 border-dashed border-slate-600 hover:border-indigo-500 rounded-2xl p-6 text-center cursor-pointer transition bg-slate-900/40 hover:bg-indigo-950/20 group">
+            
+            <div id="capturePrompt" class="space-y-3">
+              <div class="w-16 h-16 rounded-2xl bg-indigo-600/20 text-indigo-400 mx-auto flex items-center justify-center group-hover:scale-110 transition duration-300 shadow-inner">
+                <i data-lucide="camera" class="w-8 h-8"></i>
+              </div>
+              <div>
+                <p class="font-bold text-white text-base">Kliknutím spustit fotoaparát</p>
+                <p class="text-xs text-slate-400 mt-1">Nebo vyberte soubor z galerie / disku</p>
+              </div>
+              <span class="inline-block text-xs font-medium px-3 py-1 bg-indigo-500/20 text-indigo-300 rounded-full border border-indigo-500/30">
+                Mobilní fotoaparát 1 kliknutím
+              </span>
+            </div>
+
+            <!-- Preview Container -->
+            <div id="previewContainer" class="hidden relative">
+              <img id="imagePreview" class="max-h-64 mx-auto rounded-xl shadow-lg border border-slate-700 object-contain bg-black/50" alt="Náhled">
+              <div id="pdfPreview" class="hidden py-8 text-center">
+                <i data-lucide="file-text" class="w-16 h-16 mx-auto text-indigo-400 mb-2"></i>
+                <p id="pdfFilename" class="text-sm font-semibold text-white"></p>
+              </div>
+              <button type="button" onclick="event.stopPropagation(); removePhoto();" class="mt-3 px-3 py-1.5 bg-rose-500/20 text-rose-300 hover:bg-rose-500/30 border border-rose-500/40 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                <span>Zrušit / Vyfotit znovu</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- CATEGORY SELECTION -->
+        <div class="bg-slate-800/90 border border-slate-700/80 rounded-2xl p-5 shadow-xl">
+          <div class="flex items-center justify-between mb-3">
+            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">2. Zvolte složku / kategorii</label>
+            <button type="button" onclick="openNewCategoryModal()" class="text-xs text-indigo-400 hover:text-indigo-300 font-semibold inline-flex items-center gap-1">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i> Přidat složku
+            </button>
+          </div>
+
+          <!-- Dynamic Category Pills -->
+          <div id="categoriesList" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+            <!-- Populated via JS -->
+            <div class="animate-pulse bg-slate-700/50 h-14 rounded-xl"></div>
+            <div class="animate-pulse bg-slate-700/50 h-14 rounded-xl"></div>
+            <div class="animate-pulse bg-slate-700/50 h-14 rounded-xl"></div>
+          </div>
+        </div>
+
+        <!-- EMAIL ROUTING & NOTE -->
+        <div class="bg-slate-800/90 border border-slate-700/80 rounded-2xl p-5 shadow-xl space-y-4">
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider">3. Cílový e-mail a poznámka</label>
+          
+          <div>
+            <label class="block text-xs text-slate-300 mb-1 font-medium">Odeslat na e-mail:</label>
+            <select id="targetEmailSelect" class="w-full px-4 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-indigo-500">
+              <!-- Populated via JS with user's emails -->
+            </select>
+          </div>
+
+          <div>
+            <label class="block text-xs text-slate-300 mb-1 font-medium">Rychlá poznámka (volitelná):</label>
+            <input type="text" id="documentNote" placeholder="např. Parkovné nemocnice, Kaufland..." class="w-full px-4 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-indigo-500">
+          </div>
+        </div>
+
+        <!-- SUBMIT BUTTON -->
+        <button type="button" id="submitDocumentBtn" onclick="submitDocument()" class="w-full py-4 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-bold text-base rounded-2xl shadow-xl shadow-indigo-600/30 transition duration-200 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
+          <i data-lucide="send" class="w-5 h-5"></i>
+          <span id="submitBtnText">Odeslat mailem a uložit do Inboxu</span>
+        </button>
+
+      </section>
+
+      <!-- ========== TAB 2: 📥 WEBOVÝ INBOX (PC / MAC „CO NA MĚ ČEKÁ“) ========== -->
+      <section id="tab-inbox" class="tab-content hidden space-y-6">
+        
+        <!-- INBOX CONTROLS / TOOLBAR -->
+        <div class="bg-slate-800/90 border border-slate-700/80 rounded-2xl p-5 shadow-xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-xl font-bold text-white flex items-center gap-2">
+              <span>📥</span> Webový Inbox dokumentů
+            </h2>
+            <p class="text-xs text-slate-400 mt-0.5">Vyfocené dokumenty čekající na uložení do vašeho PC nebo Macu</p>
+          </div>
+
+          <!-- ACTIONS: BROWSER FILE SYSTEM API & ZIP EXPORT -->
+          <div class="flex flex-wrap items-center gap-2.5 w-full md:w-auto">
+            <button type="button" onclick="saveAllToLocalDisk()" class="flex-1 md:flex-initial px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-xl shadow-lg shadow-emerald-600/20 transition flex items-center justify-center gap-2">
+              <i data-lucide="folder-down" class="w-4 h-4"></i>
+              <span>Uložit do PC/Mac disku</span>
+            </button>
+            <button type="button" onclick="downloadZipExport()" class="flex-1 md:flex-initial px-4 py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-100 font-semibold text-xs rounded-xl border border-slate-600 transition flex items-center justify-center gap-2">
+              <i data-lucide="archive" class="w-4 h-4"></i>
+              <span>Stáhnout jako ZIP</span>
+            </button>
+            <button type="button" onclick="loadInboxDocuments()" title="Obnovit" class="p-2.5 bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white rounded-xl border border-slate-600 transition">
+              <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- FILTER CHIPS -->
+        <div class="flex items-center gap-2 overflow-x-auto pb-2">
+          <button onclick="filterInbox('pending')" id="filter-pending" class="inbox-filter-btn active-filter px-3.5 py-1.5 rounded-xl text-xs font-semibold transition bg-indigo-600 text-white">
+            Čeká na uložení
+          </button>
+          <button onclick="filterInbox('all')" id="filter-all" class="inbox-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold transition bg-slate-800 text-slate-400 hover:text-white border border-slate-700">
+            Všechny dokumenty
+          </button>
+          <button onclick="filterInbox('saved_to_pc')" id="filter-saved_to_pc" class="inbox-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold transition bg-slate-800 text-slate-400 hover:text-white border border-slate-700">
+            Uložené v počítači
+          </button>
+        </div>
+
+        <!-- DOCUMENT CARDS GRID -->
+        <div id="inboxGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Populated via JS -->
+        </div>
+
+        <!-- EMPTY STATE -->
+        <div id="inboxEmptyState" class="hidden text-center py-16 bg-slate-800/40 rounded-2xl border border-slate-800">
+          <div class="w-16 h-16 rounded-2xl bg-slate-800 text-slate-500 mx-auto flex items-center justify-center mb-3 text-3xl">
+            🎉
+          </div>
+          <h3 class="text-base font-bold text-white">Vše je uloženo!</h3>
+          <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">V inboxu momentálně nečekají žádné nové dokumenty. Vyfoťte nový na mobilu!</p>
+        </div>
+
+      </section>
+
+      <!-- ========== TAB 3: ⚙️ NASTAVENÍ (E-MAILY, SLOŽKY, UŽIVATELÉ) ========== -->
+      <section id="tab-settings" class="tab-content hidden max-w-2xl mx-auto space-y-6">
+
+        <!-- MY EMAILS SECTION -->
+        <div class="bg-slate-800/90 border border-slate-700/80 rounded-2xl p-5 shadow-xl">
+          <h2 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+            <i data-lucide="mail" class="w-5 h-5 text-indigo-400"></i>
+            <span>Moje cílové e-maily</span>
+          </h2>
+          <p class="text-xs text-slate-400 mb-4">E-mailové adresy, na které si můžete odesílat vyfocené dokumenty.</p>
+
+          <div id="settingsEmailList" class="space-y-2 mb-4">
+            <!-- Populated via JS -->
+          </div>
+
+          <form id="addEmailForm" onsubmit="handleAddEmail(event)" class="flex gap-2">
+            <input type="text" id="newEmailLabel" placeholder="Popisek (např. Služební)" required class="w-1/3 px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white">
+            <input type="email" id="newEmailAddress" placeholder="email@adresa.cz" required class="flex-1 px-3.5 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white">
+            <button type="submit" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-xl transition whitespace-nowrap">
+              Přidat e-mail
+            </button>
+          </form>
+        </div>
+
+        <!-- CATEGORIES / FOLDERS SECTION -->
+        <div class="bg-slate-800/90 border border-slate-700/80 rounded-2xl p-5 shadow-xl">
+          <h2 class="text-base font-bold text-white flex items-center gap-2 mb-3">
+            <i data-lucide="folder" class="w-5 h-5 text-amber-400"></i>
+            <span>Správa složek / kategorií</span>
+          </h2>
+          <p class="text-xs text-slate-400 mb-4">Kategorie určují předmět e-mailu a název složky při uložení do počítače.</p>
+
+          <div id="settingsCategoryList" class="space-y-2 mb-4">
+            <!-- Populated via JS -->
+          </div>
+
+          <button onclick="openNewCategoryModal()" class="w-full py-2.5 border border-dashed border-slate-600 hover:border-indigo-500 text-slate-300 hover:text-white rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1.5">
+            <i data-lucide="plus" class="w-4 h-4"></i> Vytvořit novou složku / záložku
+          </button>
+        </div>
+
+        <!-- ADMIN ONLY: USER MANAGEMENT -->
+        <div id="adminUserSection" class="hidden bg-slate-800/90 border border-slate-700/80 rounded-2xl p-5 shadow-xl">
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-base font-bold text-white flex items-center gap-2">
+              <i data-lucide="users" class="w-5 h-5 text-purple-400"></i>
+              <span>Správa uživatelů (Rodina)</span>
+            </h2>
+            <span class="text-[10px] bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded-full font-bold border border-purple-500/30">Pouze Admin</span>
+          </div>
+          <p class="text-xs text-slate-400 mb-4">Můžete přidat manželku, děti nebo další členy domácnosti s vlastním přihlášením.</p>
+
+          <div id="adminUsersList" class="space-y-2 mb-4">
+            <!-- Populated via JS -->
+          </div>
+
+          <form id="addUserForm" onsubmit="handleAddUser(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <input type="text" id="newUsername" placeholder="Přihl. jméno" required class="px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white">
+            <input type="text" id="newDisplayName" placeholder="Zobrazené jméno" required class="px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white">
+            <input type="password" id="newUserPassword" placeholder="Heslo / PIN" required class="px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white">
+            <input type="email" id="newUserEmail" placeholder="Výchozí e-mail (volitelný)" class="sm:col-span-2 px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white">
+            <button type="submit" class="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs rounded-xl transition">
+              + Vytvořit uživatele
+            </button>
+          </form>
+        </div>
+
+      </section>
+
+    </div>
+
+  </main>
+
+  <!-- ==================== MOBILE BOTTOM TAB BAR ==================== -->
+  <nav id="mobileBottomNav" class="hidden md:hidden fixed bottom-0 left-0 right-0 bg-slate-900/95 backdrop-blur border-t border-slate-800 z-50 px-4 py-2 flex justify-around items-center">
+    <button onclick="switchTab('capture')" id="mobileTabBtn-capture" class="flex flex-col items-center gap-1 py-1 text-indigo-400 font-semibold transition">
+      <i data-lucide="camera" class="w-6 h-6"></i>
+      <span class="text-[10px]">Vyfotit</span>
+    </button>
+    <button onclick="switchTab('inbox')" id="mobileTabBtn-inbox" class="flex flex-col items-center gap-1 py-1 text-slate-400 font-semibold transition relative">
+      <i data-lucide="inbox" class="w-6 h-6"></i>
+      <span class="text-[10px]">Inbox</span>
+      <span id="mobileInboxBadge" class="hidden absolute top-0 right-2 w-2 h-2 rounded-full bg-indigo-500"></span>
+    </button>
+    <button onclick="switchTab('settings')" id="mobileTabBtn-settings" class="flex flex-col items-center gap-1 py-1 text-slate-400 font-semibold transition">
+      <i data-lucide="settings" class="w-6 h-6"></i>
+      <span class="text-[10px]">Nastavení</span>
+    </button>
+  </nav>
+
+  <!-- ==================== MODAL: ADD CATEGORY ==================== -->
+  <div id="categoryModal" class="hidden fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-800 border border-slate-700 rounded-2xl max-w-md w-full p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <span>📁</span> Přidat novou složku / záložku
+        </h3>
+        <button onclick="closeNewCategoryModal()" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+
+      <form id="createCategoryForm" onsubmit="handleCreateCategory(event)" class="space-y-3.5">
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Název složky (Předmět e-mailu)</label>
+          <input type="text" id="catModalName" placeholder="např. Záruční listy, Zubař..." required class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-indigo-500">
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Ikona</label>
+          <select id="catModalIcon" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none">
+            <option value="receipt">🧾 Účtenka / Paragon</option>
+            <option value="heart-pulse">🩺 Lékař / Zdraví</option>
+            <option value="file-text">📄 Smlouva / Dokument</option>
+            <option value="car">🚗 Auto / Parkování</option>
+            <option value="home">🏠 Dům / Domácnost</option>
+            <option value="folder">📁 Obecná složka</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-300 mb-1">Cílový název složky na disku (PC/Mac)</label>
+          <input type="text" id="catModalFolder" placeholder="např. Zaruky (bez mezer a diakritiky)" class="w-full px-3.5 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-xs text-white focus:outline-none">
+        </div>
+
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" onclick="closeNewCategoryModal()" class="px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-700 rounded-xl transition">
+            Zrušit
+          </button>
+          <button type="submit" class="px-5 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl shadow-lg transition">
+            Uložit složku
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

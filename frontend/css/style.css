@@ -1,0 +1,51 @@
+/* Custom styling and animations for HomeBrain */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.25s ease-out forwards;
+}
+
+/* Tab navigation active states */
+.tab-btn.active-tab {
+  color: #818cf8; /* indigo-400 */
+  border-color: #6366f1; /* indigo-500 */
+  background-color: rgba(99, 102, 241, 0.08);
+}
+
+/* Category card active state */
+.cat-card.active-cat {
+  border-color: #818cf8;
+  background-color: rgba(99, 102, 241, 0.15);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3);
+}
+
+/* Prevent double-tap zoom on iOS */
+button, input, select, textarea {
+  touch-action: manipulation;
+}
+
+/* Smooth custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
