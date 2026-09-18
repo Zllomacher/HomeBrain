@@ -1,188 +1,153 @@
 # 🧠 HomeBrain — Projektová dokumentace a specifikace
 
-> **Inteligentní rodinný správce dokumentů, účtenek a smluv s e-mailovým směrováním, lokální synchronizací a budoucím AI asistentem.**
+> **Inteligentní rodinný multi-user správce dokumentů, účtenek a smluv s e-mailovým směrováním, webovým inboxem pro PC/Mac a budoucím lokálním AI asistentem.**
 
 ---
 
 ## 1. Vize a účel projektu
 
 ### Problém
-V každodenním životě rodiny vzniká spousta papírových a digitálních dokumentů:
-* Účtenky a paragony (služební výdaje, parkování, záruční listy).
-* Lékařské zprávy (recepty, termíny dalších kontrol, posudky dětí).
-* Smlouvy, pojistky, úřední dopisy.
+V rodině vzniká neustálý tok tištěných i digitálních dokumentů:
+* **Paragony a účtenky** (služební výdaje, parkování, nákupy do domácnosti).
+* **Lékařské zprávy** (kontroly, recepty, lékařské posudky).
+* **Smlouvy a úřední dokumenty** (pojistky, energie, bankovní výpisy).
 
-Tyto dokumenty se často ztratí, vyblednou, nebo zůstanou zapomenuté v galerii mobilu. Když je člověk potřebuje najít (nebo odeslat účetnímu/do práce), stojí to spoustu času.
+Každý člen rodiny (např. manžel, manželka) má jiné potřeby:
+* Manžel potřebuje posílat pracovní účtenky do svého služebního e-mailu a lékařské zprávy do soukromého.
+* Manželka potřebuje posílat dokumenty do svého vlastního e-mailu.
+* Manžel používá Windows PC (často střídá počítače), manželka má Mac – systém proto **nesmí být vázán na konkrétní operační systém ani vyžadovat instalaci desktopových aplikací**.
 
-### Řešení: HomeBrain
-Jednoduchá webová aplikace (optimalizovaná pro mobilní telefony), kde stačí:
-1. **Otevřít odkaz na mobilu** (zabezpečený jednoduchým PINem / heslem, aby se k němu nedostal nikdo cizí).
-2. **Kliknout na „Vyfotit“** (automaticky otevře fotoaparát).
-3. **Zvolit kategorii / složku** (např. *Paragon*, *Lékařská zpráva*, *Smlouva*).
-4. **Odeslat jedním kliknutím**:
-   * Okamžitě odejde e-mailem na správnou adresu (např. firemní e-mail pro účtenky, soukromý pro lékaře) s přesně nastaveným předmětem.
-   * Zároveň se uloží do cloudové fronty, odkud se po zapnutí domácího PC automaticky stáhne do přehledné struktury složek.
-   * V budoucnu data na PC zpracuje lokální AI (Ollama) pro chytré vyhledávání přirozeným jazykem.
+### Řešení: HomeBrain (Čistě webové multi-user řešení)
+1. **Mobilní rozhraní na cestách (PWA v prohlížeči)**:
+   * Každý člen rodiny má vlastní přihlášení, které si telefon trvale pamatuje.
+   * Na dvě kliknutí: **Vyfotit -> Vybrat záložku (např. Paragon) -> Zvolit cílový e-mail -> Odeslat**.
+   * E-mail se ihned odešle s přednastaveným předmětem a přílohou.
+   * Soubor se zařadí do webového inboxu daného uživatele (*„Čeká na uložení do PC/Macu“*).
+2. **Webový Inbox na PC a Macu**:
+   * Otevře se v jakémkoliv prohlížeči (Chrome, Safari, Edge) na libovolném počítači.
+   * Uživatel vidí přehled nových dokumentů k uložení.
+   * Možnost jedním kliknutím zapsat soubory do zvolené složky na disku (využití moderního *File System Access API* prohlížeče) nebo stáhnout jako ZIP / jednotlivé soubory.
+3. **Lokální AI (Ollama) pro vytěžování dat (Fáze 3)**:
+   * Lokální AI na PC/Macu projde uložené soubory, provede OCR a umožní klást dotazy přirozeným jazykem (např. *„Kdy jde Radek na kontrolu?“*).
 
 ---
 
 ## 2. Architektura systému
 
-Systém se skládá ze tří hlavních komponent:
-
 ```mermaid
 flowchart TD
-    subgraph Mobilní telefon ["📱 Mobilní telefon (Vy i Manželka)"]
-        UI["Webová aplikace (PWA / Web-based)"]
-        PIN["Zabezpečení (PIN / Trvalé přihlášení)"]
-        CAM["Fotoaparát / Nahrání dokumentu"]
-        CAT["Volba kategorie (Složky)"]
-        
-        PIN --> UI
-        UI --> CAM
-        CAM --> CAT
+    subgraph Mobily ["📱 Mobilní telefony (V terénu)"]
+        U1["Telefon 1 (Radek)<br/>Vlastní login & e-maily"]
+        U2["Telefon 2 (Manželka)<br/>Vlastní login & e-maily"]
+        U3["Telefon 3 (Další uživatel)"]
     end
 
-    subgraph Cloud Server ["☁️ Cloud Backend (Dostupný 24/7)"]
-        API["FastAPI Backend Server"]
-        AUTH["Ověření přístupu"]
-        MAIL["E-mail Router (SMTP)"]
-        QUEUE["Dočasné úložiště (Fronta dokumentů)"]
-        CONF["Správa kategorií a pravidel"]
+    subgraph CloudApp ["☁️ HomeBrain Web Server (Dostupný 24/7)"]
+        API["FastAPI Web Backend"]
+        AUTH["Správa uživatelů & Bezpečnost<br/>(Login, JWT, Hesla)"]
+        ROUTER["E-mail Router (SMTP)"]
+        DB[(Databáze SQLite<br/>Uživatelé, E-maily, Kategorie, Metadata)]
+        STORAGE["Bezpečné úložiště souborů (Fronta)"]
 
         API --> AUTH
-        AUTH --> MAIL
-        AUTH --> QUEUE
-        CONF --> API
+        AUTH --> DB
+        API --> ROUTER
+        API --> STORAGE
     end
 
-    subgraph Prijemci ["📧 E-mailové schránky"]
-        M1["Služební e-mail (Paragony, parkování...)"]
-        M2["Soukromý e-mail (Lékařské zprávy...)"]
-        M3["Účetní / Jiný e-mail"]
+    subgraph EmailSvet ["📧 Cílové e-mailové schránky"]
+        E1["Služební mail (Radek)"]
+        E2["Soukromý mail (Radek)"]
+        E3["E-mail Manželky"]
+        E4["Účetní / Jiný e-mail"]
     end
 
-    subgraph Domaci PC ["💻 Domácí PC (Zapnuté dle potřeby)"]
-        SYNC["HomeBrain PC Sync Klient"]
-        STORAGE["Strukturované složky na disku"]
-        AI["Ollama (Lokální AI) + OCR (Fáze 3)"]
-        CHAT["Lokální vyhledávací asistent"]
+    subgraph Pocitace ["💻 Počítače doma i v práci (Webový přístup)"]
+        PC1["Windows PC (Radek)<br/>Webový prohlížeč -> Inbox"]
+        MAC["Apple Mac (Manželka)<br/>Webový prohlížeč -> Inbox"]
+        FS["Uložení do disku<br/>(File System API / Stažení)"]
+        OLLAMA["Lokální AI (Ollama)<br/>OCR + Vektorové vyhledávání"]
 
-        SYNC --> STORAGE
-        STORAGE --> AI
-        AI --> CHAT
+        PC1 --> FS
+        MAC --> FS
+        FS --> OLLAMA
     end
 
-    CAT -- "HTTPS (Upload + Kategorie)" --> API
-    MAIL --> M1
-    MAIL --> M2
-    MAIL --> M3
-    QUEUE -- "Synchronizace (po zapnutí PC)" --> SYNC
+    U1 -- "Foto + Volba e-mailu" --> API
+    U2 -- "Foto + Volba e-mailu" --> API
+    U3 -- "Foto + Volba e-mailu" --> API
+
+    ROUTER --> E1
+    ROUTER --> E2
+    ROUTER --> E3
+    ROUTER --> E4
+
+    STORAGE -. "Zobrazení & Stažení do disku" .-> PC1
+    STORAGE -. "Zobrazení & Stažení do disku" .-> MAC
 ```
 
 ---
 
-## 3. Rozpad projektu do fází (Roadmapa)
+## 3. Klíčové moduly a funkcionality
 
-### 🎯 Fáze 1: Mobilní webový sběr & E-mail Router (AKTUÁLNÍ CÍL)
-* **Zabezpečení**:
-  * Ochrana webu přístupovým kódem / PINem s „Zapamatovat na tomto zařízení“ (session token).
-  * Manželka ani vy nemusíte při každém focení zadávat heslo znovu.
-  * Cizí člověk z internetu se k nahrávání ani datům nedostane.
-* **Mobilní Web UI (Web-based PWA)**:
-  * Velká přehledná tlačítka: *Vyfotit*, *Vybrat ze souborů*.
-  * Volba kdo nahrává (např. *Radek* / *Manželka*).
-  * Přepínač kategorií (rychlá volba: *Paragon*, *Lékařská zpráva*, *Smlouva*, *Auto / Parkování*...).
-  * Tlačítko **Přidat novou složku / kategorii** přímo z rozhraní.
-* **E-mailové odesílání (SMTP Router)**:
-  * Každá složka má definovaný:
-    * Cílový e-mail (např. `firma@prace.cz`, `osobni@seznam.cz`).
-    * Šablonu předmětu (např. `[Paragon] 2026-09-19 - Nákup`).
-    * Volitelně rychlou poznámku k dokumentu.
-* **Cloudové uložení do fronty**:
-  * Soubory se bezpečně uloží do databáze/úložiště a čekají na stažení do PC.
+### 1. Správa uživatelů a zabezpečení
+* **Multi-user od základu**: Každý uživatel má vlastní účet (jméno, přihlašovací heslo/PIN).
+* **Role**: Správce (může přidávat další uživatele) a běžný uživatel.
+* **Trvalé přihlášení**: Na osobním telefonu a počítači se uživatel přihlásí jednou (bezpečný token v `localStorage`), takže aplikace neobtěžuje opakovaným přihlašováním.
+* **Ochrana před cizími lidmi**: Veškeré API a webové rozhraní jsou chráněny autorizací.
 
----
+### 2. Uživatelské nastavení a profily
+* **Cílové e-maily**: Každý uživatel si může definovat libovolný počet cílových e-mailů (např. *Služební*, *Soukromý*, *Účetní*).
+* **Záložky / Kategorie**:
+  * Název kategorie (např. *Paragon*, *Lékařská zpráva*, *Smlouva*, *Auto / Servis*).
+  * Výchozí cílový e-mail pro danou kategorii.
+  * Šablona předmětu e-mailu: `[Název položky] - {datum} - {poznamka}`.
+  * Možnost **kdykoliv přidat novou záložku/kategorii** přímo z webu.
 
-### 📂 Fáze 2: PC Synchronizace & Lokální struktura
-* Jednoduchý skript / aplikace běžící na domácím PC s Windows.
-* Jakmile se PC zapne nebo na pokyn v aplikaci („Uložit připravené“):
-  * Stáhne nové dokumenty z cloudu.
-  * Uloží je na PC do logického stromu složek:
-    ```text
-    C:\HomeBrain_Data\
-    ├── Paragony\
-    │   └── 2026\
-    │       ├── 2026-09-19_paragon_parking.jpg
-    │       └── 2026-09-19_paragon_parking.meta.json
-    ├── Lekarske_zpravy\
-    │   └── 2026\
-    └── Smlouvy\
-    ```
-  * Potvrdí cloudu úspěšné stažení (cloudová fronta se může pročistit).
+### 3. Mobilní rychlý sběr (Focení na 2 kliknutí)
+1. Otevření webové adresy v mobilu.
+2. Tlačítko **Vyfotit** (přímé spuštění fotoaparátu) nebo výběr existujícího souboru.
+3. Výběr záložky (např. *Lékařská zpráva*).
+4. Volba cílového e-mailu (předvyplněn výchozí pro danou záložku).
+5. Volitelná poznámka (např. *„Parkovné nemocnice“*).
+6. Tlačítko **Odeslat**:
+   * E-mail ihned odejde s přílohou a přesným předmětem.
+   * Záznam a soubor se zařadí do schránky k uložení na PC/Mac.
+
+### 4. Webový Inbox pro PC & Mac (Ukládání na disk)
+* Žádný instalovaný software do operačního systému.
+* Uživatel otevře web na Windows PC nebo Macu a vidí **„Co na mě čeká“** (Inbox):
+  * Seznam nahraných dokumentů s náhledy miniatur, datem a kategorií.
+* **Ukládání na lokální disk**:
+  * **File System Access API (Chrome/Edge)**: Umožňuje v prohlížeči vybrat kořenovou složku na PC/Macu a jedním kliknutím na *„Uložit připravené“* soubory automaticky uložit do podsložek na disku.
+  * **Klasické stažení / ZIP**: Možnost stáhnout vybrané soubory nebo celý balík ve formátu ZIP rozdělený do podsložek.
+* Po uložení se položky ve webu označí jako zpracované/archivované.
 
 ---
 
-### 🧠 Fáze 3: Lokální AI & Domácí „NotebookLM“ (Ollama)
-* **Běží výhradně lokálně na vašem PC**:
-  * Bezpečnost: Lékařské a rodinné dokumenty neopouštějí váš počítač do cizích cloudových AI.
-  * Běží pouze tehdy, když je PC zapnuté.
-* **OCR & Vytěžování dat**:
-  * Automatické rozpoznání textu z fotografií a PDF (např. Tesseract / OCR / Vision modely).
-  * Extrakce klíčových dat: datum vystavení, datum příští návštěvy, jména lékařů, částky.
-* **Vektorové vyhledávání (RAG) a chatovací asistent**:
-  * Možnost klást dotazy přirozeným jazykem:
-    * *Dotaz*: „Kdy jde Radek na kontrolu?“
-    * *Odpověď*: „Podle zprávy od MUDr. Nováka z 12. 5. je kontrola 15. 10. v 9:00 v ordinaci na Poliklinice.“
+## 4. Technologický stack
 
----
-
-### 👥 Fáze 4: Multi-tenancy, GDPR a veřejné nasazení
-* Plnohodnotná registrace nových rodin/uživatelů.
-* Striktní oddělení dat jednotlivých uživatelů.
-* GDPR souhlasy, šifrování databází atd.
-
----
-
-## 4. Technologický stack (Fáze 1 & 2)
-
-| Komponenta | Technologie | Důvod volby |
+| Vrstva | Technologie | Popis |
 | :--- | :--- | :--- |
-| **Backend API** | **Python (FastAPI)** | Moderní, rychlý, nativně asynchronní, perfektní ekosystém pro pozdější napojení Ollama / AI. |
-| **Frontend** | **Mobilní Web (HTML5 / Tailwind CSS / Vanilla JS)** | Bleskové načítání na mobilu, funguje spolehlivě v Safari i Chrome bez nutnosti instalace aplikací. |
-| **Zabezpečení** | **PIN / Session Token** | Jednoduché pro rodinu (neotravuje složitým přihlašováním při každém nákupu), ale bezpečné proti cizím. |
-| **Odesílání e-mailů** | **SMTP (Gmail / Seznam / Sendgrid / Resend)** | Standardizovaný e-mailový protokol, nulové náklady. |
-| **Cloud Hosting** | **Docker / Render / Fly.io / VPS** | Možnost provozu zdarma na Free Tier nebo na malém virtuálu. |
-| **PC Klient** | **Python skript / Windows executable** | Nenáročné na zdroje, běží na pozadí Windows. |
+| **Backend** | **Python 3.11+ / FastAPI** | Výkonný, moderní asynchronní framework, ideální pro správu souborů, e-mailů a budoucí napojení AI. |
+| **Databáze** | **SQLite (přes SQLAlchemy/SQLModel)** | Jednoduchá, bezúdržbová databáze pro uživatele, e-mailové profily, kategorie a historii dokumentů. |
+| **Frontend** | **Responzivní Web (HTML5, Tailwind CSS, Modern JS)** | 100% multiplatformní, přizpůsobené pro telefony (PWA) i velké obrazovky PC/Macu. |
+| **E-mail** | **Standardní SMTP protokol** | Podpora Seznam.cz, Gmail (aplikační heslo), firemního SMTP nebo cloudových služeb (Resend, Brevo). |
+| **Hosting** | **Docker kontejner** | Připraveno pro nasazení na jakýkoliv cloud (Render, Railway, Fly.io) nebo domácí mini-server. |
+| **Budoucí AI** | **Ollama (Lokální běh)** | Běží na PC/Macu uživatele při zapnutí – lokální OCR + RAG Q&A bez odesílání citlivých rodinných dat do cloudu. |
 
 ---
 
-## 5. Pravidla pro složky a směrování (Příklad konfigurace)
+## 5. Roadmapa realizace
 
-Aplikace bude mít jednoduchou správu kategorií:
-```json
-[
-  {
-    "id": "paragon-sluzebni",
-    "nazev": "Paragon (Služební)",
-    "cilovy_email": "prace@firma.cz",
-    "predmet_sablona": "Paragon - {datum} - {poznamka}",
-    "cilova_slozka_pc": "Paragony/Sluzebni"
-  },
-  {
-    "id": "lekarska-zprava",
-    "nazev": "Lékařská zpráva",
-    "cilovy_email": "radek.osobni@seznam.cz",
-    "predmet_sablona": "Lékařská zpráva - {datum} - {poznamka}",
-    "cilova_slozka_pc": "Lekarske_zpravy"
-  },
-  {
-    "id": "smlouva",
-    "nazev": "Smlouva",
-    "cilovy_email": "radek.osobni@seznam.cz",
-    "predmet_sablona": "Smlouva - {datum} - {poznamka}",
-    "cilova_slozka_pc": "Smlouvy"
-  }
-]
-```
-Uživatel si může v rozhraní kdykoliv přidat novou složku podle potřeby.
+- [x] **Specifikace a architektura**: Ucelený návrh multi-user webového řešení pro PC i Mac.
+- [ ] **Fáze 1 (Aktivní cíl)**:
+  - Backend (FastAPI, SQLite, správa uživatelů a rolí, správa e-mailů a kategorií, SMTP odesílání).
+  - Mobilní frontend (Focení, rychlé odeslání s volbou e-mailu a předmětu, správa záložek).
+  - Webový Inbox pro PC/Mac (přehled čekajících dokumentů, stažení / uložení na disk).
+  - Možnost přidávat další uživatele (admin rozhraní).
+- [ ] **Fáze 2 (Pokročilé uložení a automatizace)**:
+  - Pokročilé mapování podsložek a automatické ukládání do disku přes browser File System API.
+- [ ] **Fáze 3 (Lokální AI - Ollama & NotebookLM styl)**:
+  - OCR skenování textu z vyfocených zpráv a paragonů.
+  - Vektorové vyhledávání a asistent odpovídající na rodinné dotazy (*„Kdy jde Radek na kontrolu?“*).
