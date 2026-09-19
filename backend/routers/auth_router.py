@@ -68,11 +68,15 @@ def register(data: CreateUserRequest, session: Session = Depends(get_session)):
     if existing:
         raise HTTPException(status_code=400, detail=f"Uživatel se jménem '{clean_username}' již existuje.")
 
+    # První registrovaný uživatel v systému se stává automaticky administrátorem
+    has_any_user = session.exec(select(User)).first() is not None
+    user_role = "admin" if not has_any_user else (data.role or "user")
+
     new_user = User(
         username=clean_username,
         display_name=data.display_name.strip() or clean_username,
         password_hash=hash_password(data.password),
-        role=data.role
+        role=user_role
     )
     session.add(new_user)
     session.commit()

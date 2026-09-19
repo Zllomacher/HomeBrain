@@ -38,60 +38,11 @@ def verify_password(plain_password: str, stored_hash: str) -> bool:
         return False
 
 def init_db():
-    """Create tables and seed initial default users & categories."""
+    """Create tables and seed initial default categories (no hardcoded users)."""
     SQLModel.metadata.create_all(engine)
 
     with Session(engine) as session:
-        # Check if users exist
-        admin = session.exec(select(User).where(User.username == settings.DEFAULT_ADMIN_USERNAME)).first()
-        if not admin:
-            # Create default admin (e.g. Radek)
-            admin = User(
-                username=settings.DEFAULT_ADMIN_USERNAME,
-                display_name=settings.DEFAULT_ADMIN_NAME,
-                password_hash=hash_password(settings.DEFAULT_ADMIN_PASSWORD),
-                role="admin"
-            )
-            session.add(admin)
-            session.commit()
-            session.refresh(admin)
-
-            # Add default emails for admin
-            session.add(UserEmail(
-                user_id=admin.id,
-                label="Služební e-mail",
-                email_address="radek.prace@firma.cz",
-                is_default=True
-            ))
-            session.add(UserEmail(
-                user_id=admin.id,
-                label="Soukromý e-mail",
-                email_address="radek.soukromy@seznam.cz",
-                is_default=False
-            ))
-
-        # Check if wife account exists
-        wife = session.exec(select(User).where(User.username == settings.DEFAULT_WIFE_USERNAME)).first()
-        if not wife:
-            wife = User(
-                username=settings.DEFAULT_WIFE_USERNAME,
-                display_name=settings.DEFAULT_WIFE_NAME,
-                password_hash=hash_password(settings.DEFAULT_WIFE_PASSWORD),
-                role="user"
-            )
-            session.add(wife)
-            session.commit()
-            session.refresh(wife)
-
-            # Add default email for wife
-            session.add(UserEmail(
-                user_id=wife.id,
-                label="Osobní e-mail",
-                email_address="monika@seznam.cz",
-                is_default=True
-            ))
-
-        # Seed standard categories if none exist
+        # Seed standard categories if none exist yet
         categories = session.exec(select(Category)).all()
         if not categories:
             default_categories = [
