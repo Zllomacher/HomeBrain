@@ -8,7 +8,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=3">
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans antialiased selection:bg-indigo-500 selection:text-white pb-24 md:pb-10">
 
@@ -46,7 +46,7 @@
         </button>
       </nav>
 
-      <!-- User Profile Badge & Quick Settings/Logout -->
+      <!-- User Profile Badge & Quick Logout / Switch Account -->
       <div id="userHeaderBar" class="hidden flex items-center gap-2">
         <button onclick="switchTab('settings')" title="Přejít do Nastavení" class="flex items-center gap-2 bg-slate-700/70 hover:bg-slate-700 px-3 py-1.5 rounded-xl border border-slate-600/50 transition">
           <div class="w-6 h-6 rounded-full bg-indigo-500 flex items-center justify-center text-xs font-bold text-white uppercase" id="userAvatar">
@@ -55,8 +55,9 @@
           <span id="userDisplayName" class="text-xs sm:text-sm font-medium text-slate-200 truncate max-w-[100px]">Radek</span>
           <span id="userRoleBadge" class="hidden text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/30 font-semibold">Admin</span>
         </button>
-        <button id="logoutBtn" title="Odhlásit se" class="p-2 text-slate-400 hover:text-rose-400 hover:bg-slate-700/50 rounded-xl transition">
-          <i data-lucide="log-out" class="w-4 h-4"></i>
+        <button id="logoutBtn" title="Odhlásit se / Změnit účet" class="px-2.5 py-1.5 bg-slate-700/60 hover:bg-rose-600/20 hover:border-rose-500/50 border border-slate-600/60 text-slate-300 hover:text-rose-300 rounded-xl text-xs font-medium transition flex items-center gap-1.5">
+          <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+          <span class="hidden sm:inline">Odhlásit</span>
         </button>
       </div>
     </div>
@@ -79,34 +80,39 @@
 
     <!-- ==================== VIEW 1: AUTH (LOGIN & REGISTRATION) ==================== -->
     <div id="authView" class="max-w-md mx-auto my-6 bg-slate-800/90 p-6 sm:p-8 rounded-3xl border border-slate-700 shadow-2xl backdrop-blur">
+      
+      <!-- Brand & Title -->
       <div class="text-center mb-6">
         <div class="w-16 h-16 rounded-2xl bg-indigo-600/20 text-indigo-400 mx-auto flex items-center justify-center mb-3 text-3xl shadow-inner">
           🔒
         </div>
         <h2 class="text-2xl font-bold text-white">HomeBrain</h2>
-        <p class="text-xs text-slate-400 mt-1">Bezpečné rodinné přihlášení</p>
+        <p class="text-xs text-slate-400 mt-1">Bezpečný rodinný správce dokumentů</p>
       </div>
 
-      <!-- Auth Mode Switcher (Login vs Register) -->
-      <div class="flex bg-slate-900/80 p-1 rounded-xl mb-5 border border-slate-700/60">
-        <button type="button" onclick="switchAuthMode('login')" id="authTab-login" class="flex-1 py-2 text-xs font-semibold rounded-lg transition bg-indigo-600 text-white shadow">
-          Přihlásit se
+      <!-- Prominent Mode Switcher Buttons -->
+      <div class="grid grid-cols-2 gap-2 bg-slate-900 p-1.5 rounded-2xl mb-6 border border-slate-700/80">
+        <button type="button" onclick="switchAuthMode('login')" id="authTab-login" class="py-2.5 px-3 text-xs font-bold rounded-xl transition bg-indigo-600 text-white shadow-lg flex items-center justify-center gap-1.5">
+          <i data-lucide="log-in" class="w-4 h-4"></i>
+          <span>Přihlásit se</span>
         </button>
-        <button type="button" onclick="switchAuthMode('register')" id="authTab-register" class="flex-1 py-2 text-xs font-semibold rounded-lg transition text-slate-400 hover:text-white">
-          + Nový účet / Registrace
+        <button type="button" onclick="switchAuthMode('register')" id="authTab-register" class="py-2.5 px-3 text-xs font-bold rounded-xl transition text-slate-400 hover:text-white flex items-center justify-center gap-1.5">
+          <i data-lucide="user-plus" class="w-4 h-4"></i>
+          <span>Založit nový účet</span>
         </button>
       </div>
 
-      <!-- LOGIN FORM -->
+      <!-- ========== SECTION A: LOGIN FORM ========== -->
       <div id="loginSection">
+        
         <!-- Quick login buttons -->
-        <div class="mb-5 bg-slate-900/50 p-3 rounded-2xl border border-slate-700/50">
-          <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">⚡ Rychlé přihlášení 1 kliknutím</label>
+        <div class="mb-5 bg-slate-900/60 p-3.5 rounded-2xl border border-slate-700/60">
+          <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">⚡ Rychlé přihlášení (klikněte):</label>
           <div class="grid grid-cols-2 gap-2">
-            <button type="button" onclick="setQuickLogin('radek', 'admin')" class="flex items-center justify-center gap-2 p-2.5 bg-slate-800 hover:bg-indigo-600/30 hover:border-indigo-500 border border-slate-700 rounded-xl transition text-xs font-medium">
-              <span>👤</span> Radek <span class="text-[10px] text-slate-400">(Admin)</span>
+            <button type="button" onclick="setQuickLogin('radek', 'admin')" class="flex items-center justify-center gap-2 p-2.5 bg-slate-800 hover:bg-indigo-600/30 hover:border-indigo-500 border border-slate-700 rounded-xl transition text-xs font-semibold text-white">
+              <span>👤</span> Radek <span class="text-[10px] text-slate-400 font-normal">(Admin)</span>
             </button>
-            <button type="button" onclick="setQuickLogin('monika', 'monika')" class="flex items-center justify-center gap-2 p-2.5 bg-slate-800 hover:bg-pink-600/30 hover:border-pink-500 border border-slate-700 rounded-xl transition text-xs font-medium">
+            <button type="button" onclick="setQuickLogin('monika', 'monika')" class="flex items-center justify-center gap-2 p-2.5 bg-slate-800 hover:bg-pink-600/30 hover:border-pink-500 border border-slate-700 rounded-xl transition text-xs font-semibold text-white">
               <span>👩</span> Monika
             </button>
           </div>
@@ -129,38 +135,63 @@
             </label>
           </div>
 
-          <button type="submit" id="loginSubmitBtn" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl shadow-lg shadow-indigo-600/30 transition flex items-center justify-center gap-2">
+          <button type="submit" id="loginSubmitBtn" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-indigo-600/30 transition flex items-center justify-center gap-2">
             <span>Přihlásit se</span>
             <i data-lucide="arrow-right" class="w-4 h-4"></i>
           </button>
         </form>
+
+        <!-- Big bottom CTA: Nemáte ještě účet? -->
+        <div class="mt-6 pt-5 border-t border-slate-700/80 text-center">
+          <p class="text-xs text-slate-400 mb-2.5">Nemáte ještě vytvořený svůj účet?</p>
+          <button type="button" onclick="switchAuthMode('register')" class="w-full py-3 bg-slate-900 hover:bg-emerald-600/20 text-emerald-400 hover:text-emerald-300 border border-emerald-500/40 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 shadow">
+            <i data-lucide="user-plus" class="w-4 h-4"></i>
+            <span>👉 Klikněte sem a založte si nový účet</span>
+          </button>
+        </div>
+
       </div>
 
-      <!-- REGISTER FORM -->
+      <!-- ========== SECTION B: REGISTER FORM ========== -->
       <div id="registerSection" class="hidden">
+        
+        <div class="mb-4 bg-emerald-950/30 p-3 rounded-2xl border border-emerald-500/30 text-emerald-300 text-xs">
+          <p class="font-bold flex items-center gap-1.5">
+            <i data-lucide="check-circle" class="w-4 h-4"></i> Založení nového účtu
+          </p>
+          <p class="text-[11px] text-slate-300 mt-0.5">Vyplňte údaje níže. Účet se ihned vytvoří a budete automaticky přihlášeni.</p>
+        </div>
+
         <form id="registerForm" onsubmit="handleRegister(event)" class="space-y-3.5">
           <div>
-            <label class="block text-xs font-medium text-slate-300 mb-1">Přihlašovací jméno (login)</label>
-            <input type="text" id="regUsername" required placeholder="např. tomas" class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-indigo-500 transition">
+            <label class="block text-xs font-medium text-slate-300 mb-1">Přihlašovací jméno (login, např. jméno bez diakritiky)</label>
+            <input type="text" id="regUsername" required placeholder="např. tomas nebo eva" class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500 transition">
           </div>
           <div>
             <label class="block text-xs font-medium text-slate-300 mb-1">Zobrazené jméno</label>
-            <input type="text" id="regDisplayName" required placeholder="např. Tomáš" class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-indigo-500 transition">
+            <input type="text" id="regDisplayName" required placeholder="např. Tomáš" class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500 transition">
           </div>
           <div>
-            <label class="block text-xs font-medium text-slate-300 mb-1">Heslo / PIN</label>
-            <input type="password" id="regPassword" required placeholder="Zvolte heslo nebo PIN" class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-indigo-500 transition">
+            <label class="block text-xs font-medium text-slate-300 mb-1">Heslo / PIN (alespoň 3 znaky)</label>
+            <input type="password" id="regPassword" required placeholder="Zvolte si heslo nebo číselný PIN" class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500 transition">
           </div>
           <div>
             <label class="block text-xs font-medium text-slate-300 mb-1">Váš e-mail pro odesílání (volitelný)</label>
-            <input type="email" id="regEmail" placeholder="tomas@email.cz" class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-indigo-500 transition">
+            <input type="email" id="regEmail" placeholder="tomas@email.cz" class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-emerald-500 transition">
           </div>
 
-          <button type="submit" id="regSubmitBtn" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl shadow-lg shadow-emerald-600/30 transition flex items-center justify-center gap-2 mt-4">
+          <button type="submit" id="regSubmitBtn" class="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm rounded-xl shadow-lg shadow-emerald-600/30 transition flex items-center justify-center gap-2 mt-4">
             <i data-lucide="user-plus" class="w-4 h-4"></i>
-            <span>Vytvořit účet a přihlásit</span>
+            <span>Vytvořit účet a rovnou přihlásit</span>
           </button>
         </form>
+
+        <div class="mt-6 pt-5 border-t border-slate-700/80 text-center">
+          <button type="button" onclick="switchAuthMode('login')" class="w-full py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-2">
+            <span>← Zpět na přihlášení existujícím účtem</span>
+          </button>
+        </div>
+
       </div>
 
     </div>
@@ -232,7 +263,7 @@
             <div class="flex items-center justify-between mb-1">
               <label class="block text-xs text-slate-300 font-medium">Odeslat na e-mail:</label>
               <button type="button" onclick="switchTab('settings')" class="text-[11px] text-indigo-400 hover:underline">
-                + Přidat nový e-mail v nastavení
+                + Přidat e-mail v nastavení
               </button>
             </div>
             <select id="targetEmailSelect" class="w-full px-4 py-2.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:outline-none focus:border-indigo-500">
@@ -561,8 +592,8 @@
     </div>
   </div>
 
-  <!-- Scripts -->
-  <script src="js/api.js"></script>
-  <script src="js/app.js"></script>
+  <!-- Scripts with cache buster -->
+  <script src="js/api.js?v=3"></script>
+  <script src="js/app.js?v=3"></script>
 </body>
 </html>
