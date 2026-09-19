@@ -23,7 +23,7 @@ def test_get_categories(auth_client):
     assert "Paragon" in names
     assert "Lékařská zpráva" in names
 
-def test_add_and_delete_category(auth_client):
+def test_add_edit_and_delete_category(auth_client):
     # Add new category
     create_res = auth_client.post(
         "/api/settings/categories",
@@ -37,12 +37,25 @@ def test_add_and_delete_category(auth_client):
     new_cat = create_res.json()
     assert new_cat["name"] == "Pojištění"
 
+    # Edit category
+    edit_res = auth_client.put(
+        f"/api/settings/categories/{new_cat['id']}",
+        json={
+            "name": "Pojištění a smlouvy",
+            "icon": "home",
+            "target_folder_name": "Pojisteni_Smlouvy"
+        }
+    )
+    assert edit_res.status_code == 200
+    edited = edit_res.json()
+    assert edited["name"] == "Pojištění a smlouvy"
+    assert edited["target_folder_name"] == "Pojisteni_Smlouvy"
+
     # Delete it
     del_res = auth_client.delete(f"/api/settings/categories/{new_cat['id']}")
     assert del_res.status_code == 200
 
 def test_upload_document_and_check_inbox(auth_client):
-    # Create fake image bytes
     fake_image = io.BytesIO(b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00`\x00`\x00\x00")
     files = {"file": ("test_paragon.jpg", fake_image, "image/jpeg")}
     data = {

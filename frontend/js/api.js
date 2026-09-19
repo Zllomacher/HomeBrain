@@ -38,7 +38,7 @@ const api = {
         // Token expired or invalid
         this.setToken(null);
         window.dispatchEvent(new CustomEvent("auth:required"));
-        throw new Error("Relace vypršela. Přihlaste se prosím znovu.");
+        throw new Error("Relace vypršela nebo nesprávné přihlašovací údaje.");
       }
 
       if (!res.ok) {
@@ -71,8 +71,24 @@ const api = {
     return data;
   },
 
+  async register(data) {
+    const res = await this.request("/api/auth/register", {
+      method: "POST",
+      body: JSON.stringify(data)
+    });
+    this.setToken(res.access_token);
+    return res;
+  },
+
   async getMe() {
     return await this.request("/api/auth/me");
+  },
+
+  async updateProfile(data) {
+    return await this.request("/api/auth/profile", {
+      method: "PUT",
+      body: JSON.stringify(data)
+    });
   },
 
   async listUsers() {
@@ -118,6 +134,13 @@ const api = {
   async createCategory(data) {
     return await this.request("/api/settings/categories", {
       method: "POST",
+      body: JSON.stringify(data)
+    });
+  },
+
+  async updateCategory(catId, data) {
+    return await this.request(`/api/settings/categories/${catId}`, {
+      method: "PUT",
       body: JSON.stringify(data)
     });
   },

@@ -29,6 +29,13 @@ class CategoryCreate(BaseModel):
     subject_template: Optional[str] = "{category} - {date} - {note}"
     target_folder_name: Optional[str] = None
 
+class CategoryUpdate(BaseModel):
+    name: Optional[str] = None
+    icon: Optional[str] = None
+    default_email: Optional[str] = None
+    subject_template: Optional[str] = None
+    target_folder_name: Optional[str] = None
+
 class CategoryResponse(BaseModel):
     id: int
     name: str
@@ -57,7 +64,6 @@ def add_user_email(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
-    # If set as default, reset other defaults
     if data.is_default:
         existing_defaults = session.exec(
             select(UserEmail).where(UserEmail.user_id == current_user.id, UserEmail.is_default == True)
@@ -96,7 +102,6 @@ def get_categories(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session)
 ):
-    # Categories available to user: either user_id is None (shared) or matches current_user.id
     categories = session.exec(
         select(Category)
         .where(or_(Category.user_id == None, Category.user_id == current_user.id))
@@ -120,6 +125,35 @@ def create_category(
         target_folder_name=target_folder,
         sort_order=10
     )
+    session.add(category)
+    session.commit()
+    session.refresh(category)
+    return category
+
+@router.put("/categories/{category_id}", response_model=CategoryResponse)
+def update_category(
+    category_id: int,
+    data: CategoryUpdate,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    category = session.get(Category, category_id)
+    if not category:
+        raise HTTPException(status_code=404, detail="Kategorie nenalezena.")
+    if category.user_id is not None and category.user_id != current_user.id and current_user.role != "admin":
+        raise HTTPException(status_code=403, detail="Nemáte oprávnění upravovat tuto kategorii.")
+
+    if data.name:
+        category.name = data.name.strip()
+    if data.icon:
+        category.icon = data.icon
+    if data.default_email is not None:
+        category.default_email = data.default_email.strip() if data.default_email else None
+    if data.subject_template:
+        category.subject_template = data.subject_template
+    if data.target_folder_name:
+        category.target_folder_name = data.target_folder_name.strip()
+
     session.add(category)
     session.commit()
     session.refresh(category)

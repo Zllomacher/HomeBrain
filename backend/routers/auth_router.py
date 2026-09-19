@@ -31,6 +31,11 @@ class CreateUserRequest(BaseModel):
     role: str = "user"
     initial_email: Optional[str] = None
 
+class UpdateProfileRequest(BaseModel):
+    display_name: Optional[str] = None
+    current_password: Optional[str] = None
+    new_password: Optional[str] = None
+
 @router.post("/login", response_model=LoginResponse)
 def login(data: LoginRequest, session: Session = Depends(get_session)):
     user = session.exec(select(User).where(User.username == data.username.strip().lower())).first()
@@ -51,6 +56,49 @@ def login(data: LoginRequest, session: Session = Depends(get_session)):
         )
     )
 
+@router.post("/register", response_model=LoginResponse)
+def register(data: CreateUserRequest, session: Session = Depends(get_session)):
+    clean_username = data.username.strip().lower()
+    if len(clean_username) < 2:
+        raise HTTPException(status_code=400, detail="Uživatelské jméno musí mít alespoň 2 znaky.")
+    if len(data.password) < 3:
+        raise HTTPException(status_code=400, detail="Heslo/PIN musí mít alespoň 3 znaky.")
+
+    existing = session.exec(select(User).where(User.username == clean_username)).first()
+    if existing:
+        raise HTTPException(status_code=400, detail=f"Uživatel se jménem '{clean_username}' již existuje.")
+
+    new_user = User(
+        username=clean_username,
+        display_name=data.display_name.strip() or clean_username,
+        password_hash=hash_password(data.password),
+        role=data.role
+    )
+    session.add(new_user)
+    session.commit()
+    session.refresh(new_user)
+
+    if data.initial_email:
+        email = UserEmail(
+            user_id=new_user.id,
+            label="Hlavní e-mail",
+            email_address=data.initial_email.strip(),
+            is_default=True
+        )
+        session.add(email)
+        session.commit()
+
+    token = create_access_token({"sub": new_user.username})
+    return LoginResponse(
+        access_token=token,
+        user=UserResponse(
+            id=new_user.id,
+            username=new_user.username,
+            display_name=new_user.display_name,
+            role=new_user.role
+        )
+    )
+
 @router.get("/me", response_model=UserResponse)
 def get_me(current_user: User = Depends(get_current_user)):
     return UserResponse(
@@ -58,6 +106,39 @@ def get_me(current_user: User = Depends(get_current_user)):
         username=current_user.username,
         display_name=current_user.display_name or current_user.username,
         role=current_user.role
+    )
+
+@router.put("/profile", response_model=UserResponse)
+def update_profile(
+    data: UpdateProfileRequest,
+    current_user: User = Depends(get_current_user),
+    session: Session = Depends(get_session)
+):
+    user = session.get(User, current_user.id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Uživatel nenalezen.")
+
+    if data.display_name:
+        user.display_name = data.display_name.strip()
+
+    if data.new_password:
+        if not data.current_password:
+            raise HTTPException(status_code=400, detail="Pro změnu hesla musíte zadat současné heslo.")
+        if not verify_password(data.current_password, user.password_hash):
+            raise HTTPException(status_code=400, detail="Současné heslo je nesprávné.")
+        if len(data.new_password) < 3:
+            raise HTTPException(status_code=400, detail="Nové heslo musí mít alespoň 3 znaky.")
+        user.password_hash = hash_password(data.new_password)
+
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+
+    return UserResponse(
+        id=user.id,
+        username=user.username,
+        display_name=user.display_name,
+        role=user.role
     )
 
 @router.get("/users", response_model=List[UserResponse])

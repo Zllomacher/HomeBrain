@@ -35,6 +35,7 @@ function showAuthView() {
   document.getElementById("authView").classList.remove("hidden");
   document.getElementById("appContainer").classList.add("hidden");
   document.getElementById("userHeaderBar").classList.add("hidden");
+  document.getElementById("headerNavTabs").classList.add("hidden");
   document.getElementById("mobileBottomNav").classList.add("hidden");
   lucide.createIcons();
 }
@@ -43,11 +44,18 @@ function showAppView() {
   document.getElementById("authView").classList.add("hidden");
   document.getElementById("appContainer").classList.remove("hidden");
   document.getElementById("userHeaderBar").classList.remove("hidden");
+  document.getElementById("headerNavTabs").classList.remove("hidden");
   document.getElementById("mobileBottomNav").classList.remove("hidden");
 
   // Populate user header
   document.getElementById("userDisplayName").textContent = currentUser.display_name || currentUser.username;
   document.getElementById("userAvatar").textContent = (currentUser.display_name || currentUser.username).charAt(0).toUpperCase();
+
+  // Populate profile fields in Settings tab
+  const unameDisp = document.getElementById("profileUsernameDisplay");
+  if (unameDisp) unameDisp.value = `@${currentUser.username}`;
+  const dispName = document.getElementById("profileDisplayName");
+  if (dispName) dispName.value = currentUser.display_name || "";
 
   const roleBadge = document.getElementById("userRoleBadge");
   const adminSection = document.getElementById("adminUserSection");
@@ -62,10 +70,59 @@ function showAppView() {
   lucide.createIcons();
 }
 
+function switchAuthMode(mode) {
+  const loginSec = document.getElementById("loginSection");
+  const regSec = document.getElementById("registerSection");
+  const loginTab = document.getElementById("authTab-login");
+  const regTab = document.getElementById("authTab-register");
+
+  if (mode === "login") {
+    loginSec.classList.remove("hidden");
+    regSec.classList.add("hidden");
+    loginTab.className = "flex-1 py-2 text-xs font-semibold rounded-lg transition bg-indigo-600 text-white shadow";
+    regTab.className = "flex-1 py-2 text-xs font-semibold rounded-lg transition text-slate-400 hover:text-white";
+  } else {
+    loginSec.classList.add("hidden");
+    regSec.classList.remove("hidden");
+    regTab.className = "flex-1 py-2 text-xs font-semibold rounded-lg transition bg-indigo-600 text-white shadow";
+    loginTab.className = "flex-1 py-2 text-xs font-semibold rounded-lg transition text-slate-400 hover:text-white";
+  }
+}
+
 function setQuickLogin(username, password) {
   document.getElementById("loginUsername").value = username;
   document.getElementById("loginPassword").value = password;
   document.getElementById("loginForm").dispatchEvent(new Event("submit"));
+}
+
+async function handleRegister(e) {
+  e.preventDefault();
+  const username = document.getElementById("regUsername").value.trim();
+  const displayName = document.getElementById("regDisplayName").value.trim();
+  const password = document.getElementById("regPassword").value;
+  const initialEmail = document.getElementById("regEmail").value.trim();
+  const submitBtn = document.getElementById("regSubmitBtn");
+
+  try {
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = `<span>Registruji...</span>`;
+    const res = await api.register({
+      username,
+      display_name: displayName,
+      password,
+      initial_email: initialEmail || null
+    });
+    currentUser = res.user;
+    showAppView();
+    await loadInitialData();
+    showToast("Vítejte v HomeBrain!", `Váš účet byl úspěšně vytvořen jako ${currentUser.display_name}`, "success");
+  } catch (err) {
+    showToast("Chyba registrace", err.message, "error");
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = `<i data-lucide="user-plus" class="w-4 h-4"></i><span>Vytvořit účet a přihlásit</span>`;
+    lucide.createIcons();
+  }
 }
 
 // --- Event Listeners Setup ---
@@ -128,20 +185,23 @@ async function loadInitialData() {
 function switchTab(tabName) {
   // Hide all contents
   document.querySelectorAll(".tab-content").forEach(el => el.classList.add("hidden"));
-  document.getElementById(`tab-${tabName}`).classList.remove("hidden");
+  const targetContent = document.getElementById(`tab-${tabName}`);
+  if (targetContent) targetContent.classList.remove("hidden");
 
-  // Update Desktop Tabs
-  document.querySelectorAll(".tab-btn").forEach(btn => {
-    btn.classList.remove("active-tab");
-    btn.classList.add("text-slate-400");
+  // Update Header Tabs
+  const headerTabs = ["capture", "inbox", "settings"];
+  headerTabs.forEach(name => {
+    const btn = document.getElementById(`headerTab-${name}`);
+    if (btn) {
+      if (name === tabName) {
+        btn.className = "header-tab-btn active-tab flex items-center gap-2 px-3.5 py-1.5 font-semibold text-xs rounded-lg transition bg-indigo-600 text-white shadow";
+      } else {
+        btn.className = "header-tab-btn flex items-center gap-2 px-3.5 py-1.5 font-semibold text-xs rounded-lg transition text-slate-400 hover:text-white";
+      }
+    }
   });
-  const activeDesktopBtn = document.getElementById(`desktopTabBtn-${tabName}`);
-  if (activeDesktopBtn) {
-    activeDesktopBtn.classList.add("active-tab");
-    activeDesktopBtn.classList.remove("text-slate-400");
-  }
 
-  // Update Mobile Tabs
+  // Update Mobile Bottom Tabs
   const mobileButtons = ["capture", "inbox", "settings"];
   mobileButtons.forEach(name => {
     const btn = document.getElementById(`mobileTabBtn-${name}`);
@@ -162,8 +222,12 @@ function switchTab(tabName) {
     loadUserEmails();
     loadCategories();
     if (currentUser.role === "admin") loadAdminUsers();
+    // Refresh profile inputs
+    document.getElementById("profileUsernameDisplay").value = `@${currentUser.username}`;
+    document.getElementById("profileDisplayName").value = currentUser.display_name || "";
   }
 
+  window.scrollTo({ top: 0, behavior: "smooth" });
   lucide.createIcons();
 }
 
@@ -246,7 +310,7 @@ function renderCategoriesCapture() {
 
     const card = document.createElement("button");
     card.type = "button";
-    card.className = `cat-card p-3 rounded-xl border text-left transition flex items-center gap-2.5 ${
+    card.className = `cat-card p-3 rounded-2xl border text-left transition flex items-center gap-2.5 ${
       isSelected
         ? "active-cat border-indigo-500 bg-indigo-500/10 text-white"
         : "border-slate-700 bg-slate-900/60 text-slate-300 hover:border-slate-600 hover:bg-slate-900"
@@ -268,7 +332,6 @@ function selectCategory(catId) {
   selectedCategoryId = catId;
   renderCategoriesCapture();
 
-  // If category has a default email configured, select it in the dropdown
   const cat = categories.find(c => c.id === catId);
   if (cat && cat.default_email) {
     const select = document.getElementById("targetEmailSelect");
@@ -278,6 +341,122 @@ function selectCategory(catId) {
         break;
       }
     }
+  }
+}
+
+function renderCategoriesSettings() {
+  const list = document.getElementById("settingsCategoryList");
+  list.innerHTML = "";
+
+  if (categories.length === 0) {
+    list.innerHTML = `<p class="text-xs text-slate-400">Zatím nemáte vytvořené žádné složky.</p>`;
+    return;
+  }
+
+  categories.forEach(cat => {
+    const item = document.createElement("div");
+    item.className = "flex flex-col sm:flex-row sm:items-center justify-between p-3.5 bg-slate-900/80 border border-slate-700/60 rounded-2xl text-xs gap-3";
+    item.innerHTML = `
+      <div class="flex items-center gap-3">
+        <span class="text-2xl">${getIconEmoji(cat.icon)}</span>
+        <div>
+          <span class="font-bold text-sm text-white">${cat.name}</span>
+          <p class="text-[11px] text-slate-400 mt-0.5">
+            Předmět mailu: <span class="font-mono text-slate-300">${cat.name}</span> | Složka na disku: <span class="font-mono text-indigo-300">${cat.target_folder_name}</span>
+          </p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2 self-end sm:self-center">
+        <button onclick="openEditCategoryModal(${cat.id})" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-medium transition flex items-center gap-1">
+          <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+          <span>Upravit</span>
+        </button>
+        <button onclick="handleDeleteCategory(${cat.id})" class="p-1.5 text-slate-400 hover:text-rose-400 transition" title="Smazat složku">
+          <i data-lucide="trash-2" class="w-4 h-4"></i>
+        </button>
+      </div>
+    `;
+    list.appendChild(item);
+  });
+  lucide.createIcons();
+}
+
+function openNewCategoryModal() {
+  document.getElementById("categoryModal").classList.remove("hidden");
+  document.getElementById("catModalName").focus();
+}
+
+function closeNewCategoryModal() {
+  document.getElementById("categoryModal").classList.add("hidden");
+  document.getElementById("createCategoryForm").reset();
+}
+
+async function handleCreateCategory(e) {
+  e.preventDefault();
+  const name = document.getElementById("catModalName").value.trim();
+  const icon = document.getElementById("catModalIcon").value;
+  const folder = document.getElementById("catModalFolder").value.trim();
+
+  try {
+    await api.createCategory({
+      name,
+      icon,
+      target_folder_name: folder || name.replace(/\s+/g, "_")
+    });
+    closeNewCategoryModal();
+    showToast("Složka vytvořena", `Kategorie „${name}“ byla úspěšně přidána.`, "success");
+    await loadCategories();
+  } catch (err) {
+    showToast("Chyba", err.message, "error");
+  }
+}
+
+function openEditCategoryModal(catId) {
+  const cat = categories.find(c => c.id === catId);
+  if (!cat) return;
+
+  document.getElementById("editCatId").value = cat.id;
+  document.getElementById("editCatName").value = cat.name;
+  document.getElementById("editCatIcon").value = cat.icon || "folder";
+  document.getElementById("editCatFolder").value = cat.target_folder_name || "";
+
+  document.getElementById("editCategoryModal").classList.remove("hidden");
+  document.getElementById("editCatName").focus();
+}
+
+function closeEditCategoryModal() {
+  document.getElementById("editCategoryModal").classList.add("hidden");
+}
+
+async function handleSaveEditCategory(e) {
+  e.preventDefault();
+  const catId = document.getElementById("editCatId").value;
+  const name = document.getElementById("editCatName").value.trim();
+  const icon = document.getElementById("editCatIcon").value;
+  const folder = document.getElementById("editCatFolder").value.trim();
+
+  try {
+    await api.updateCategory(catId, {
+      name,
+      icon,
+      target_folder_name: folder || name.replace(/\s+/g, "_")
+    });
+    closeEditCategoryModal();
+    showToast("Složka upravena", `Kategorie „${name}“ byla aktualizována.`, "success");
+    await loadCategories();
+  } catch (err) {
+    showToast("Chyba", err.message, "error");
+  }
+}
+
+async function handleDeleteCategory(id) {
+  if (!confirm("Opravdu chcete tuto kategorii smazat?")) return;
+  try {
+    await api.deleteCategory(id);
+    showToast("Smazáno", "Kategorie byla odstraněna.", "success");
+    await loadCategories();
+  } catch (err) {
+    showToast("Chyba", err.message, "error");
   }
 }
 
@@ -312,7 +491,95 @@ function renderEmailsDropdown() {
   });
 }
 
-// --- Submit Document ---
+function renderEmailsSettings() {
+  const list = document.getElementById("settingsEmailList");
+  list.innerHTML = "";
+
+  if (userEmails.length === 0) {
+    list.innerHTML = `<p class="text-xs text-slate-400">Zatím nemáte nastavený žádný e-mail pro odesílání.</p>`;
+    return;
+  }
+
+  userEmails.forEach(e => {
+    const item = document.createElement("div");
+    item.className = "flex items-center justify-between p-3 bg-slate-900/80 border border-slate-700/60 rounded-2xl text-xs";
+    item.innerHTML = `
+      <div>
+        <span class="font-bold text-white">${e.label}</span>
+        <span class="text-slate-400 ml-2 font-mono">${e.email_address}</span>
+        ${e.is_default ? '<span class="ml-2 text-[10px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded border border-indigo-500/30 font-semibold">Výchozí</span>' : ''}
+      </div>
+      <button onclick="handleDeleteEmail(${e.id})" class="text-slate-400 hover:text-rose-400 transition p-1" title="Smazat e-mail">
+        <i data-lucide="trash-2" class="w-4 h-4"></i>
+      </button>
+    `;
+    list.appendChild(item);
+  });
+  lucide.createIcons();
+}
+
+async function handleAddEmail(e) {
+  e.preventDefault();
+  const label = document.getElementById("newEmailLabel").value.trim();
+  const email = document.getElementById("newEmailAddress").value.trim();
+
+  try {
+    await api.addEmail({
+      label,
+      email_address: email,
+      is_default: userEmails.length === 0
+    });
+    document.getElementById("newEmailLabel").value = "";
+    document.getElementById("newEmailAddress").value = "";
+    showToast("Přidáno", "E-mail byl úspěšně přidán do profilu.", "success");
+    await loadUserEmails();
+  } catch (err) {
+    showToast("Chyba", err.message, "error");
+  }
+}
+
+async function handleDeleteEmail(id) {
+  if (!confirm("Opravdu chcete tento e-mail smazat?")) return;
+  try {
+    await api.deleteEmail(id);
+    showToast("Smazáno", "E-mail byl odstraněn.", "success");
+    await loadUserEmails();
+  } catch (err) {
+    showToast("Chyba", err.message, "error");
+  }
+}
+
+// --- Profile & Password Update ---
+async function handleUpdateProfile(e) {
+  e.preventDefault();
+  const displayName = document.getElementById("profileDisplayName").value.trim();
+  const currentPassword = document.getElementById("profileCurrentPassword").value;
+  const newPassword = document.getElementById("profileNewPassword").value;
+
+  const payload = { display_name: displayName };
+  if (newPassword) {
+    if (!currentPassword) {
+      showToast("Chyba", "Pro změnu hesla zadejte současné heslo.", "error");
+      return;
+    }
+    payload.current_password = currentPassword;
+    payload.new_password = newPassword;
+  }
+
+  try {
+    const updated = await api.updateProfile(payload);
+    currentUser = updated;
+    document.getElementById("userDisplayName").textContent = updated.display_name;
+    document.getElementById("userAvatar").textContent = updated.display_name.charAt(0).toUpperCase();
+    document.getElementById("profileCurrentPassword").value = "";
+    document.getElementById("profileNewPassword").value = "";
+    showToast("Uloženo", "Váš profil a přihlašovací údaje byly úspěšně aktualizovány.", "success");
+  } catch (err) {
+    showToast("Chyba při ukládání", err.message, "error");
+  }
+}
+
+// --- Submit Document Flow ---
 async function submitDocument() {
   if (!selectedFile) {
     showToast("Chybí dokument", "Nejprve vyfoťte nebo vyberte dokument.", "error");
@@ -351,17 +618,14 @@ async function submitDocument() {
       "success"
     );
 
-    // Reset capture form
     removePhoto();
     document.getElementById("documentNote").value = "";
-
-    // Refresh inbox count
     await loadInboxDocuments();
   } catch (err) {
     showToast("Chyba při odesílání", err.message, "error");
   } finally {
     submitBtn.disabled = false;
-    submitText.textContent = "Odeslat mailem a uložit do Inboxu";
+    submitText.textContent = "Odeslat mailem a zařadit do Inboxu";
     lucide.createIcons();
   }
 }
@@ -375,12 +639,14 @@ async function loadInboxDocuments() {
     // Update pending badge
     const allPending = await api.getInboxDocuments("pending");
     const count = allPending.length;
-    document.getElementById("inboxBadgeCount").textContent = count;
+    
+    const badgeH = document.getElementById("headerInboxBadge");
+    if (badgeH) badgeH.textContent = count;
+
     const mobileBadge = document.getElementById("mobileInboxBadge");
-    if (count > 0) {
-      mobileBadge.classList.remove("hidden");
-    } else {
-      mobileBadge.classList.add("hidden");
+    if (mobileBadge) {
+      if (count > 0) mobileBadge.classList.remove("hidden");
+      else mobileBadge.classList.add("hidden");
     }
   } catch (err) {
     console.error("Failed to load inbox:", err);
@@ -414,7 +680,7 @@ function renderInbox(docs) {
 
   docs.forEach(doc => {
     const card = document.createElement("div");
-    card.className = "bg-slate-800/90 border border-slate-700/70 rounded-2xl overflow-hidden shadow-lg hover:border-slate-600 transition flex flex-col";
+    card.className = "bg-slate-800/90 border border-slate-700/70 rounded-3xl overflow-hidden shadow-lg hover:border-slate-600 transition flex flex-col";
 
     const isImage = doc.content_type.startsWith("image/");
     const previewHtml = isImage
@@ -448,21 +714,21 @@ function renderInbox(docs) {
             </span>
             ${statusBadge}
           </div>
-          ${doc.note ? `<p class="text-xs text-slate-300 bg-slate-900/60 p-2 rounded-lg border border-slate-700/50 mb-2 font-medium">„${doc.note}“</p>` : ''}
+          ${doc.note ? `<p class="text-xs text-slate-300 bg-slate-900/60 p-2 rounded-xl border border-slate-700/50 mb-2 font-medium">„${doc.note}“</p>` : ''}
           <div class="text-[11px] text-slate-400 space-y-0.5">
-            <p>👤 Nahrál: <span class="text-slate-200">${doc.user_name}</span></p>
+            <p>👤 Nahrál: <span class="text-slate-200 font-medium">${doc.user_name}</span></p>
             <p>🕒 ${createdDate}</p>
-            <p>📬 ${emailStatus} <span class="text-slate-300">(${doc.sent_to_email || '—'})</span></p>
+            <p>📬 ${emailStatus} <span class="text-slate-300 font-mono text-[10px]">(${doc.sent_to_email || '—'})</span></p>
           </div>
         </div>
 
         <div class="pt-3 border-t border-slate-700/60 flex items-center justify-between gap-2">
-          <a href="/api/documents/${doc.id}/file?download=true" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-xs font-semibold inline-flex items-center gap-1 transition">
+          <a href="/api/documents/${doc.id}/file?download=true" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded-xl text-xs font-semibold inline-flex items-center gap-1 transition">
             <i data-lucide="download" class="w-3.5 h-3.5"></i>
             <span>Stáhnout</span>
           </a>
           ${doc.status === "pending" ? `
-            <button onclick="markAsSaved(${doc.id})" class="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 rounded-lg text-xs font-semibold transition">
+            <button onclick="markAsSaved(${doc.id})" class="px-3 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/40 rounded-xl text-xs font-semibold transition">
               ✓ Označit jako uloženo
             </button>
           ` : `
@@ -506,35 +772,28 @@ async function saveAllToLocalDisk() {
     return;
   }
 
-  // Check if browser supports File System Access API
   if ("showDirectoryPicker" in window) {
     try {
       showToast("Výběr cílové složky", "Vyberte složku na vašem PC nebo Macu, kam chcete dokumenty uložit.", "info");
-      const dirHandle = await window.showDirectoryPicker({
-        mode: "readwrite"
-      });
+      const dirHandle = await window.showDirectoryPicker({ mode: "readwrite" });
 
       let savedCount = 0;
 
       for (const doc of docs) {
         try {
-          // Subfolder by category (e.g. "Paragony", "Lekarske_zpravy")
           const folderName = doc.category_name.replace(/[^a-zA-Z0-9_\u00C0-\u017F-]/g, "_");
           const subDirHandle = await dirHandle.getDirectoryHandle(folderName, { create: true });
 
-          // Fetch file bytes
           const res = await fetch(`/api/documents/${doc.id}/file`, {
             headers: { "Authorization": `Bearer ${api.getToken()}` }
           });
           const blob = await res.blob();
 
-          // Filename
           const fileHandle = await subDirHandle.getFileHandle(doc.original_filename, { create: true });
           const writable = await fileHandle.createWritable();
           await writable.write(blob);
           await writable.close();
 
-          // Mark as saved in backend
           await api.updateDocumentStatus(doc.id, "saved_to_pc");
           savedCount++;
         } catch (err) {
@@ -554,7 +813,6 @@ async function saveAllToLocalDisk() {
       }
     }
   } else {
-    // Fallback: Download ZIP
     showToast("Stahuji ZIP", "Váš prohlížeč nepodporuje přímý zápis na disk. Stahuji uspořádaný ZIP archiv.", "info");
     downloadZipExport();
   }
@@ -562,130 +820,6 @@ async function saveAllToLocalDisk() {
 
 function downloadZipExport() {
   window.open(api.getExportZipUrl(currentInboxFilter), "_blank");
-}
-
-// --- Settings Section ---
-function renderEmailsSettings() {
-  const list = document.getElementById("settingsEmailList");
-  list.innerHTML = "";
-
-  if (userEmails.length === 0) {
-    list.innerHTML = `<p class="text-xs text-slate-400">Zatím nemáte nastavený žádný e-mail.</p>`;
-    return;
-  }
-
-  userEmails.forEach(e => {
-    const item = document.createElement("div");
-    item.className = "flex items-center justify-between p-3 bg-slate-900/70 border border-slate-700/60 rounded-xl text-xs";
-    item.innerHTML = `
-      <div>
-        <span class="font-bold text-white">${e.label}</span>
-        <span class="text-slate-400 ml-2 font-mono">${e.email_address}</span>
-        ${e.is_default ? '<span class="ml-2 text-[10px] bg-indigo-500/20 text-indigo-300 px-1.5 py-0.5 rounded border border-indigo-500/30">Výchozí</span>' : ''}
-      </div>
-      <button onclick="handleDeleteEmail(${e.id})" class="text-slate-400 hover:text-rose-400 transition p-1">
-        <i data-lucide="trash-2" class="w-4 h-4"></i>
-      </button>
-    `;
-    list.appendChild(item);
-  });
-  lucide.createIcons();
-}
-
-async function handleAddEmail(e) {
-  e.preventDefault();
-  const label = document.getElementById("newEmailLabel").value.trim();
-  const email = document.getElementById("newEmailAddress").value.trim();
-
-  try {
-    await api.addEmail({
-      label,
-      email_address: email,
-      is_default: userEmails.length === 0
-    });
-    document.getElementById("newEmailLabel").value = "";
-    document.getElementById("newEmailAddress").value = "";
-    showToast("Přidáno", "E-mail byl úspěšně přidán do profilu.", "success");
-    await loadUserEmails();
-  } catch (err) {
-    showToast("Chyba", err.message, "error");
-  }
-}
-
-async function handleDeleteEmail(id) {
-  if (!confirm("Opravdu chcete tento e-mail smazat?")) return;
-  try {
-    await api.deleteEmail(id);
-    showToast("Smazáno", "E-mail byl odstraněn.", "success");
-    await loadUserEmails();
-  } catch (err) {
-    showToast("Chyba", err.message, "error");
-  }
-}
-
-function renderCategoriesSettings() {
-  const list = document.getElementById("settingsCategoryList");
-  list.innerHTML = "";
-
-  categories.forEach(cat => {
-    const item = document.createElement("div");
-    item.className = "flex items-center justify-between p-3 bg-slate-900/70 border border-slate-700/60 rounded-xl text-xs";
-    item.innerHTML = `
-      <div class="flex items-center gap-2.5">
-        <span class="text-lg">${getIconEmoji(cat.icon)}</span>
-        <div>
-          <span class="font-bold text-white">${cat.name}</span>
-          <p class="text-[10px] text-slate-400">Předmět: <span class="font-mono text-slate-300">${cat.subject_template}</span> | Složka: <span class="font-mono text-slate-300">${cat.target_folder_name}</span></p>
-        </div>
-      </div>
-      <button onclick="handleDeleteCategory(${cat.id})" class="text-slate-400 hover:text-rose-400 transition p-1">
-        <i data-lucide="trash-2" class="w-4 h-4"></i>
-      </button>
-    `;
-    list.appendChild(item);
-  });
-  lucide.createIcons();
-}
-
-function openNewCategoryModal() {
-  document.getElementById("categoryModal").classList.remove("hidden");
-  document.getElementById("catModalName").focus();
-}
-
-function closeNewCategoryModal() {
-  document.getElementById("categoryModal").classList.add("hidden");
-  document.getElementById("createCategoryForm").reset();
-}
-
-async function handleCreateCategory(e) {
-  e.preventDefault();
-  const name = document.getElementById("catModalName").value.trim();
-  const icon = document.getElementById("catModalIcon").value;
-  const folder = document.getElementById("catModalFolder").value.trim();
-
-  try {
-    await api.createCategory({
-      name,
-      icon,
-      target_folder_name: folder || name.replace(/\s+/g, "_")
-    });
-    closeNewCategoryModal();
-    showToast("Složka vytvořena", `Kategorie „${name}“ byla úspěšně přidána.`, "success");
-    await loadCategories();
-  } catch (err) {
-    showToast("Chyba", err.message, "error");
-  }
-}
-
-async function handleDeleteCategory(id) {
-  if (!confirm("Opravdu chcete tuto kategorii smazat?")) return;
-  try {
-    await api.deleteCategory(id);
-    showToast("Smazáno", "Kategorie byla odstraněna.", "success");
-    await loadCategories();
-  } catch (err) {
-    showToast("Chyba", err.message, "error");
-  }
 }
 
 // --- Admin: Users Management ---
@@ -704,23 +838,23 @@ function renderAdminUsers(users) {
 
   users.forEach(u => {
     const item = document.createElement("div");
-    item.className = "flex items-center justify-between p-3 bg-slate-900/70 border border-slate-700/60 rounded-xl text-xs";
+    item.className = "flex items-center justify-between p-3 bg-slate-900/80 border border-slate-700/60 rounded-2xl text-xs";
     item.innerHTML = `
-      <div class="flex items-center gap-2">
-        <div class="w-6 h-6 rounded-full bg-purple-600 text-white font-bold flex items-center justify-center text-[10px]">
+      <div class="flex items-center gap-2.5">
+        <div class="w-7 h-7 rounded-xl bg-purple-600 text-white font-bold flex items-center justify-center text-xs">
           ${u.display_name.charAt(0).toUpperCase()}
         </div>
         <div>
-          <span class="font-bold text-white">${u.display_name}</span>
+          <span class="font-bold text-white text-sm">${u.display_name}</span>
           <span class="text-slate-400 font-mono text-[11px] ml-1">(@${u.username})</span>
-          ${u.role === 'admin' ? '<span class="ml-2 text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded border border-amber-500/30">Admin</span>' : ''}
+          ${u.role === 'admin' ? '<span class="ml-2 text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30 font-semibold">Admin</span>' : ''}
         </div>
       </div>
       ${u.id !== currentUser.id ? `
-        <button onclick="handleDeleteUser(${u.id})" class="text-slate-400 hover:text-rose-400 transition p-1">
+        <button onclick="handleDeleteUser(${u.id})" class="text-slate-400 hover:text-rose-400 transition p-1" title="Smazat uživatele">
           <i data-lucide="trash-2" class="w-4 h-4"></i>
         </button>
-      ` : ''}
+      ` : '<span class="text-slate-500 text-[11px] italic mr-2">Váš účet</span>'}
     `;
     list.appendChild(item);
   });
@@ -769,13 +903,13 @@ function showToast(title, message, type = "success") {
   const msgEl = document.getElementById("toastMessage");
 
   if (type === "success") {
-    toast.className = "mb-6 p-4 rounded-xl border flex items-center justify-between shadow-lg transition-all animate-fade-in bg-emerald-950/80 border-emerald-500/50 text-emerald-200";
+    toast.className = "mb-6 p-4 rounded-2xl border flex items-center justify-between shadow-xl transition-all animate-fade-in bg-emerald-950/90 border-emerald-500/50 text-emerald-200";
     icon.textContent = "✅";
   } else if (type === "error") {
-    toast.className = "mb-6 p-4 rounded-xl border flex items-center justify-between shadow-lg transition-all animate-fade-in bg-rose-950/80 border-rose-500/50 text-rose-200";
+    toast.className = "mb-6 p-4 rounded-2xl border flex items-center justify-between shadow-xl transition-all animate-fade-in bg-rose-950/90 border-rose-500/50 text-rose-200";
     icon.textContent = "⚠️";
   } else {
-    toast.className = "mb-6 p-4 rounded-xl border flex items-center justify-between shadow-lg transition-all animate-fade-in bg-indigo-950/80 border-indigo-500/50 text-indigo-200";
+    toast.className = "mb-6 p-4 rounded-2xl border flex items-center justify-between shadow-xl transition-all animate-fade-in bg-indigo-950/90 border-indigo-500/50 text-indigo-200";
     icon.textContent = "ℹ️";
   }
 
